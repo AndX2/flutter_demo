@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import 'dart:math';
+import 'dart:async';
 
 import './data.dart';
 
@@ -24,17 +25,43 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     @required this.maxHeight,
     @required this.child,
   });
+  TabController controller;
+  var scrollController = ScrollController();
   final double minHeight;
   final double maxHeight;
   final Widget child;
+  StreamController<dynamic> _positionController = StreamController.broadcast();
   @override
   double get minExtent => minHeight;
   @override
   double get maxExtent => max(maxHeight, minHeight);
+  void tabControllerChanged() {
+    _positionController.add(null);
+    // print('tabControllerChanged');
+    // print(
+    //     'extent: ${scrollController.position.maxScrollExtent}, viewport: ${scrollController.position.viewportDimension}');
+    double extent = scrollController.position.maxScrollExtent;
+    double viewport = scrollController.position.viewportDimension;
+    int index = controller.index;
+    double scrollLength = extent + viewport;
+    int count = controller.length;
+    double scrollTo = scrollLength / (count * 2) +
+        index * (scrollLength / (count)) -
+        viewport / 2;
+    if (scrollTo < 0) scrollTo = 0.0;
+    if (scrollTo > extent) scrollTo = extent;
+    scrollController.animateTo(scrollTo,
+        duration: Duration(milliseconds: 250), curve: Curves.easeInOut);
+
+    // scrollController.animateTo(controller.index * scrollController.)
+  }
+
   @override
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
-    // print('shrink delta: $shrinkOffset, $minExtent, $maxExtent}');
+    controller = DefaultTabController.of(context);
+    controller.addListener(tabControllerChanged);
+
     return new SizedBox.expand(
         child: _buildHeader(1.0 - shrinkOffset / maxExtent));
   }
@@ -64,52 +91,72 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
           Container(
             height: 100.0,
             width: double.infinity,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemBuilder: (BuildContext context, int index) {
-                return Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Container(
-                    height: double.infinity,
-                    width: 100.0,
-                    // child: Image.asset('assets/images/thumb_c1.jpg',
-                    //     fit: BoxFit.cover),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10.0),
-                      image: DecorationImage(
-                        fit: BoxFit.cover,
-                        image: AssetImage('assets/images/thumb_c1.jpg'),
-                      ),
-                    ),
-                    foregroundDecoration: BoxDecoration(
-                      // color: Colors.blue,
-                      borderRadius: BorderRadius.circular(10.0),
-                      boxShadow: [
-                        BoxShadow(
-                            color: Colors.black45,
-                            offset: Offset(4.0, 4.0),
-                            blurRadius: 4.0),
-                      ],
-                      gradient: LinearGradient(
-                        begin: Alignment.center,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.1),
-                          Colors.black.withOpacity(0.4),
-                        ],
-                      ),
-                      // image: DecorationImage(
-                      //   fit: BoxFit.cover,
-                      //   image: AssetImage('assets/images/thumb_c1.jpg'),
-                      // ),
-                    ),
-                  ),
-                );
+            child: StreamBuilder(
+              stream: _positionController.stream,
+              initialData: null,
+              builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+                return _buildTabItems();
               },
             ),
           )
         ],
       ),
+    );
+  }
+
+  ListView _buildTabItems() {
+    return ListView.builder(
+      controller: scrollController,
+      itemCount: controller.length,
+      scrollDirection: Axis.horizontal,
+      itemBuilder: (BuildContext context, int index) {
+        return Padding(
+          padding: EdgeInsets.all(8.0),
+          child: GestureDetector(
+            onTap: () {
+              print('tap on $index');
+              controller.animateTo(index);
+            },
+            child: Container(
+              child: Text(index.toString()),
+              height: double.infinity,
+              width: 100.0,
+              // child: Image.asset('assets/images/thumb_c1.jpg',
+              //     fit: BoxFit.cover),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10.0),
+                image: DecorationImage(
+                  fit: BoxFit.cover,
+                  image: AssetImage('assets/images/thumb_c1.jpg'),
+                ),
+                boxShadow: [
+                  controller.index == index
+                      ? BoxShadow(
+                          color: Colors.black54,
+                          offset: Offset(6.0, 6.0),
+                          blurRadius: 5.0)
+                      : BoxShadow(color: Colors.transparent)
+                ],
+              ),
+              foregroundDecoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10.0),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.1),
+                    Colors.black.withOpacity(0.7),
+                  ],
+                ),
+                // image: DecorationImage(
+                //   fit: BoxFit.cover,
+                //   image: AssetImage('assets/images/thumb_c1.jpg'),
+                // ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -131,101 +178,38 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   bool cartIsEmpty = false;
 
-  // Widget _buildHeader(double shrinkDelta) {
-  //   return Container(
-  //     height: double.infinity,
-  //     width: double.infinity,
-  //     child: Stack(
-  //       alignment: Alignment.bottomCenter,
-  //       children: <Widget>[
-  //         GestureDetector(
-  //           onTap: () {
-  //             setState(() {
-  //               cartIsEmpty = !cartIsEmpty;
-  //             });
-  //           },
-  //           child: ClipPath(
-  //             clipper: ArcClipper(arcScale: shrinkDelta),
-  //             child: Container(
-  //               height: double.infinity,
-  //               width: double.infinity,
-  //               color: Color(0xFFFF4700),
-  //             ),
-  //           ),
-  //         ),
-  //         Container(
-  //           height: 100.0,
-  //           width: double.infinity,
-  //           child: ListView.builder(
-  //             scrollDirection: Axis.horizontal,
-  //             itemBuilder: (BuildContext context, int index) {
-  //               return Padding(
-  //                 padding: EdgeInsets.all(8.0),
-  //                 child: Container(
-  //                   height: double.infinity,
-  //                   width: 100.0,
-  //                   decoration: BoxDecoration(
-  //                     borderRadius: BorderRadius.circular(10.0),
-  //                     image: DecorationImage(
-  //                       fit: BoxFit.cover,
-  //                       image: AssetImage('assets/images/thumb_c1.jpg'),
-  //                     ),
-  //                     // gradient: LinearGradient(
-  //                     //     begin: Alignment.topCenter,
-  //                     //     end: Alignment.bottomCenter,
-  //                     //     colors: [Colors.black12, Colors.black54],
-  //                     //     tileMode: TileMode.clamp),
-  //                   ),
-  //                 ),
-  //               );
-  //             },
-  //           ),
-  //         )
-  //       ],
-  //     ),
-  //   );
-  // }
-
   @override
   Widget build(BuildContext context) {
-    // print(MediaQuery.of(context).orientation);
+    int categoryLength = 5;
+    var categoryFoodsTabs = List<Widget>();
+    for (int i = 0; i < categoryLength; i++) {
+      categoryFoodsTabs.add(_listFoodTab());
+    }
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: <Widget>[
-        Expanded(
-          child: CustomScrollView(
-            slivers: <Widget>[
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _SliverAppBarDelegate(
-                  maxHeight: 300.0,
-                  minHeight: 125.0,
-                  child: Container(),
-                ),
+        DefaultTabController(
+          length: categoryLength,
+          child: Expanded(
+            child: NestedScrollView(
+              headerSliverBuilder:
+                  (BuildContext context, bool innerBoxIsScrolled) {
+                return <Widget>[
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _SliverAppBarDelegate(
+                      maxHeight: 300.0,
+                      minHeight: 125.0,
+                      child: Container(),
+                    ),
+                  ),
+                ];
+              },
+              body: TabBarView(
+                children: categoryFoodsTabs,
               ),
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                    (BuildContext context, int index) {
-                  return _foodItemFactory(context, index);
-                }),
-              ),
-              // SliverFixedExtentList(
-              //   itemExtent: 120.0,
-              //   delegate: SliverChildBuilderDelegate(
-              //       (BuildContext context, int index) {
-              //     return _foodItemFactory(context, index);
-              //   }),
-              // ),
-              // Expanded(
-              //   child: ListView.builder(
-              //     itemCount: 20,
-              //     itemBuilder: (BuildContext context, int index) {
-              //       return _foodItemFactory(context, index);
-              //     },
-              //   ),
-              // )
-            ],
-          ), //
+            ), //
+          ),
         ),
 
         AnimatedCrossFade(
@@ -251,11 +235,21 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _listFoodTab() {
+    return Container(
+      height: double.infinity,
+      width: double.infinity,
+      child: ListView.builder(itemBuilder: (BuildContext context, int index) {
+        return _foodItemFactory(context, index);
+      }),
+    );
+  }
+
   Widget _foodItemFactory(BuildContext context, int index) {
     return Container(
       width: double.infinity,
       child: Padding(
-          padding: EdgeInsets.only(bottom: 12.0, left: 16.0, right: 32.0),
+          padding: EdgeInsets.only(bottom: 12.0, left: 16.0, right: 16.0),
           child: Stack(
             children: <Widget>[
               Padding(
