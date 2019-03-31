@@ -36,6 +36,7 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
       BuildContext context, double shrinkOffset, bool overlapsContent) {
     return new SizedBox.expand(child: child);
   }
+  
 
   @override
   bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math';
 
 import './data.dart';
 
@@ -17,6 +18,33 @@ class MyApp extends StatelessWidget {
   }
 }
 
+class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
+  _SliverAppBarDelegate({
+    @required this.minHeight,
+    @required this.maxHeight,
+    @required this.child,
+  });
+  final double minHeight;
+  final double maxHeight;
+  final Widget child;
+  @override
+  double get minExtent => minHeight;
+  @override
+  double get maxExtent => max(maxHeight, minHeight);
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return new SizedBox.expand(child: child);
+  }
+
+  @override
+  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
+    return maxHeight != oldDelegate.maxHeight ||
+        minHeight != oldDelegate.minHeight ||
+        child != oldDelegate.child;
+  }
+}
+
 class HomePage extends StatefulWidget {
   @override
   State<StatefulWidget> createState() {
@@ -27,6 +55,53 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   bool cartIsEmpty = false;
 
+  Widget _buildHeader() {
+    return Container(
+      height: double.infinity,
+      width: double.infinity,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: <Widget>[
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                cartIsEmpty = !cartIsEmpty;
+              });
+            },
+            child: ClipPath(
+              clipper: ArcClipper(),
+              child: Container(
+                height: double.infinity,
+                width: double.infinity,
+                color: Colors.red,
+              ),
+            ),
+          ),
+          Container(
+            height: 100.0,
+            width: double.infinity,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (BuildContext context, int index) {
+                return Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Container(
+                    height: double.infinity,
+                    width: 100.0,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10.0),
+                      color: Colors.blue,
+                    ),
+                  ),
+                );
+              },
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     print(MediaQuery.of(context).orientation);
@@ -34,73 +109,39 @@ class _HomePageState extends State<HomePage> {
       mainAxisAlignment: MainAxisAlignment.end,
       children: <Widget>[
         Expanded(
-          child: Column(
-            children: <Widget>[
-              Container(
-                height: 300.0,
-                width: double.infinity,
-                child: Stack(
-                  alignment: Alignment.bottomCenter,
-                  children: <Widget>[
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          cartIsEmpty = !cartIsEmpty;
-                        });
-                      },
-                      child: ClipPath(
-                        clipper: ArcClipper(),
-                        child: Container(
-                          height: double.infinity,
-                          width: double.infinity,
-                          color: Colors.red,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      height: 100.0,
-                      width: double.infinity,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemBuilder: (BuildContext context, int index) {
-                          return Padding(
-                            padding: EdgeInsets.all(8.0),
-                            child: Container(
-                              height: double.infinity,
-                              width: 100.0,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(10.0),
-                                color: Colors.blue,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    )
-                  ],
+          child: CustomScrollView(
+            slivers: <Widget>[
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _SliverAppBarDelegate(
+                  maxHeight: 300.0,
+                  minHeight: 100.0,
+                  child: _buildHeader(),
                 ),
               ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: 20,
-                  itemBuilder: (BuildContext context, int index) {
-                    return _foodItemFactory(context, index);
-                    // Padding(
-                    //   padding: EdgeInsets.all(10.0),
-                    //   child: Container(
-                    //     height: 100.0,
-                    //     width: double.infinity,
-                    //     decoration: BoxDecoration(
-                    //       borderRadius: BorderRadius.circular(10.0),
-                    //       color: Colors.blue,
-                    //     ),
-                    //   ),
-                    // );
-                  },
-                ),
-              )
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                    (BuildContext context, int index) {
+                  return _foodItemFactory(context, index);
+                }),
+              ),
+              // SliverFixedExtentList(
+              //   itemExtent: 120.0,
+              //   delegate: SliverChildBuilderDelegate(
+              //       (BuildContext context, int index) {
+              //     return _foodItemFactory(context, index);
+              //   }),
+              // ),
+              // Expanded(
+              //   child: ListView.builder(
+              //     itemCount: 20,
+              //     itemBuilder: (BuildContext context, int index) {
+              //       return _foodItemFactory(context, index);
+              //     },
+              //   ),
+              // )
             ],
-          ),
+          ), //
         ),
 
         AnimatedCrossFade(
